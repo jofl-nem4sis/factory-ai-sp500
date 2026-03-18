@@ -1,0 +1,21 @@
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate*
+terraform/.terraform.lock.hcl
+terraform/tfplan
+
+# Python
+src/ingesta/.venv/
+__pycache__/
+*.pyc
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Secrets
+.env
+*.key

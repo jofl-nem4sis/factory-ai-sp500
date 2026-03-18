@@ -1,0 +1,42 @@
+steps:
+  # 1. Build de la imagen Docker
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_IMAGE_URI}'
+      - 'src/ingesta/'
+
+  # 2. Push a Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_IMAGE_URI}'
+
+  # 3. Actualizar Cloud Run Job con la nueva imagen
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud'
+      - 'run'
+      - 'jobs'
+      - 'update'
+      - 'sp500-ingestor-job'
+      - '--region=us-central1'
+      - '--image=${_IMAGE_URI}'
+
+  # 4. Ejecutar el Job
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud'
+      - 'run'
+      - 'jobs'
+      - 'execute'
+      - 'sp500-ingestor-job'
+      - '--region=us-central1'
+      - '--wait'
+
+substitutions:
+  _IMAGE_URI: 'us-central1-docker.pkg.dev/api-project-1076176601784/factory-ai-repo/sp500-ingestor:${SHORT_SHA}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

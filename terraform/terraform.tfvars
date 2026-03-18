@@ -1,0 +1,8 @@
+project_id         = "api-project-1076176601784"
+region             = "us-central1"
+github_owner_repo  = "jofl-nem4sis/factory-ai-sp500"
+service_account_id = "sa-sp500-ingestor"
+dataset_id         = "factory_ia_finance"
+bq_location        = "us-central1"
+ar_repo_name       = "factory-ai-repo"
+cloud_run_job_name = "sp500-ingestor-job"

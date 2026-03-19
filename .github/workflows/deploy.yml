@@ -5,12 +5,14 @@ on:
     branches: [main]
     paths:
       - 'src/ingesta/**'
-      - 'cloudbuild/**'
       - '.github/workflows/deploy.yml'
 
 permissions:
   id-token: write
   contents: read
+
+env:
+  IMAGE: us-central1-docker.pkg.dev/api-project-1076176601784/factory-ai-repo/sp500-ingestor
 
 jobs:
   deploy:
@@ -26,12 +28,27 @@ jobs:
           workload_identity_provider: 'projects/1076176601784/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'sa-sp500-ingestor@api-project-1076176601784.iam.gserviceaccount.com'
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      - name: Submit Cloud Build
+      - name: Build Docker image
+        run: docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest src/ingesta/
+
+      - name: Push to Artifact Registry
         run: |
-          gcloud builds submit \
-            --config=cloudbuild/cloudbuild.yaml \
-            --substitutions=SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7) \
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+      - name: Update Cloud Run Job
+        run: |
+          gcloud run jobs update sp500-ingestor-job \
+            --image=$IMAGE:${{ github.sha }} \
+            --region=us-central1 \
             --project=api-project-1076176601784
+
+      - name: Execute Cloud Run Job
+        run: |
+          gcloud run jobs execute sp500-ingestor-job \
+            --region=us-central1 \
+            --project=api-project-1076176601784 \
+            --wait

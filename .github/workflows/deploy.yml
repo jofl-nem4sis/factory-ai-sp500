@@ -1,41 +1,37 @@
-name: Deploy Factory_IA SP500
+name: Build & Deploy SP500 Ingestor
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - 'src/ingesta/**'
+      - 'cloudbuild/**'
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write' # Crucial para WIF
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Authenticate to Google Cloud via WIF
-      uses: google-github-actions/auth@v2
-      with:
-        workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-        service_account: ${{ secrets.GCP_SA_EMAIL }}
+      - name: Authenticate to Google Cloud via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/1076176601784/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'sa-sp500-ingestor@api-project-1076176601784.iam.gserviceaccount.com'
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-    - name: Configure Docker for Artifact Registry
-      run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
-    - name: Build and Push Docker Image
-      run: |
-        docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/factory-ai-repo/sp500-ingestor:latest src/ingesta/
-        docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/factory-ai-repo/sp500-ingestor:latest
-
-    - name: Update and Execute Cloud Run Job
-      run: |
-        gcloud run jobs update sp500-ingestor-job \
-          --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/factory-ai-repo/sp500-ingestor:latest \
-          --region us-central1
-        
-        gcloud run jobs execute sp500-ingestor-job --region us-central1 --wait
+      - name: Submit Cloud Build
+        run: |
+          gcloud builds submit \
+            --config=cloudbuild/cloudbuild.yaml \
+            --substitutions=SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7) \
+            --project=api-project-1076176601784

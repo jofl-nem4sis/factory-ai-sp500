@@ -59,6 +59,7 @@ locals {
     "roles/bigquery.jobUser",
     "roles/storage.objectAdmin",
     "roles/serviceusage.serviceUsageConsumer",
+    "roles/iam.serviceAccountUser",
   ]
 }
 
